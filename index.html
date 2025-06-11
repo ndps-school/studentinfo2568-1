@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบสถิติจำนวนนักเรียน ปีการศึกษา 2568</title>
+    
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Chart.js Datalabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    
+    <!-- Papaparse for reading Google Sheets CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <style>
+        body { font-family: 'Prompt', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .gradient-bg { background-color: #f3e8ff; background-image: linear-gradient(135deg, #e0f7fa 0%, #fce4ec 100%); }
+        .dashboard-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .dashboard-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1); }
+        #total-students-card { cursor: pointer; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-down { animation: fadeInDown 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <!-- Header Section -->
+        <header class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <img src="https://i.postimg.cc/fbhJ98Xj/2.png" alt="School Logo" class="w-[100px] h-auto">
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-bold text-gray-800">สถิติจำนวนนักเรียน</h1>
+                        <p class="text-md text-gray-600">ภาคเรียนที่ 1 ปีการศึกษา 2568</p>
+                    </div>
+                </div>
+                <div class="text-xs md:text-sm text-gray-700 text-center md:text-right">
+                    <p class="font-semibold">ข้อมูลจากระบบจัดเก็บข้อมูลนักเรียนรายบุคคล : DMC 2025</p>
+                    <p>โรงเรียนนาดูนประชาสรรพ์ จังหวัดมหาสารคาม</p>
+                    <p>รหัสโรงเรียน : 44022023</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Dashboard Cards Section -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                <!-- Total Students Card -->
+                <div id="total-students-card" class="dashboard-card bg-white/80 backdrop-blur-sm p-6 rounded-2xl flex items-center space-x-4 shadow-md">
+                    <div class="bg-purple-100 p-4 rounded-full">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-lg">จำนวนนักเรียนทั้งหมด</p>
+                        <div class="flex items-baseline space-x-2">
+                             <p id="total-students" class="text-3xl font-bold text-purple-800">-</p>
+                             <span class="text-xs text-gray-500 font-normal">(คลิ๊กเพื่อดูรายละเอียด)</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Total Classrooms Card -->
+                <div class="dashboard-card bg-white/80 backdrop-blur-sm p-6 rounded-2xl flex items-center space-x-4 shadow-md">
+                    <div class="bg-pink-100 p-4 rounded-full">
+                         <svg class="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-lg">จำนวนห้องเรียน</p>
+                        <p id="total-classrooms" class="text-3xl font-bold text-pink-800">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Year Charts Section -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">ภาพรวมจำนวนนักเรียน ปีการศึกษา 2568</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+                    <div class="lg:col-span-3 w-full h-96"><canvas id="studentBarChart"></canvas></div>
+                    <div class="lg:col-span-2 w-full h-96 flex flex-col justify-around">
+                        <div class="w-full h-[45%] flex flex-col items-center justify-center"><h3 class="text-lg font-semibold text-gray-700 mb-1">สัดส่วนนักเรียนชาย-หญิง</h3><canvas id="genderDoughnutChart"></canvas></div>
+                        <div class="w-full h-[45%] flex flex-col items-center justify-center"><h3 class="text-lg font-semibold text-gray-700 mb-1">สัดส่วน ม.ต้น / ม.ปลาย</h3><canvas id="levelDoughnutChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Data Chart Section -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 mb-8">
+                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">ข้อมูลเปรียบเทียบจำนวนนักเรียนรายชั้นย้อนหลัง 3 ปี</h2>
+                 <div class="w-full h-96">
+                     <canvas id="historicalChart"></canvas>
+                 </div>
+            </div>
+        </main>
+        
+        <footer class="text-gray-600 mt-12 text-sm border-t pt-6 flex flex-col md:flex-row justify-between items-center md:items-start space-y-4 md:space-y-0">
+            <!-- Left Side -->
+            <div class="text-center md:text-left">
+                <p class="font-semibold">© 2025 งานทะเบียน-วัดผล โรงเรียนนาดูนประชาสรรพ์</p>
+                <p>พัฒนาระบบโดย : <a href="http://www.ndps.ac.th/ndps_web/index.php?module=personnel&id=17" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">ครูชัยวัฒน์ สุบัติคำ</a> ครู คศ.3 กลุ่มสาระการเรียนรู้คณิตศาสตร์</p>
+            </div>
+            <!-- Right Side -->
+            <div class="text-center md:text-right">
+                <div class="flex items-center justify-center md:justify-end space-x-2">
+                    <svg class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+                    <span>จำนวนผู้เข้าชม: <span id="visitor-count">0</span></span>
+                </div>
+                <p>เริ่มนับสถิติเมื่อ 11/06/2025</p>
+                <p class="font-bold text-base text-gray-700 mt-1">ข้อมูล ณ วันที่ 10 มิถุนายน 2568</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 relative animate-fade-in-down">
+            <div class="flex items-center mb-4 border-b pb-3 bg-blue-100 -m-6 p-4 rounded-t-2xl">
+                <svg class="w-6 h-6 text-blue-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+                <h3 class="text-xl font-bold text-blue-800">รายละเอียดจำนวนนักเรียนรายชั้น</h3>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 ml-auto"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="overflow-x-auto pt-2">
+                <table class="min-w-full text-sm text-left text-gray-600">
+                    <thead class="bg-gray-100 text-gray-700 uppercase text-xs"><tr><th scope="col" class="px-6 py-3 rounded-l-lg">ระดับชั้น</th><th scope="col" class="px-6 py-3 text-center">ชาย (คน)</th><th scope="col" class="px-6 py-3 text-center">หญิง (คน)</th><th scope="col" class="px-6 py-3 text-center">รวม (คน)</th><th scope="col" class="px-6 py-3 rounded-r-lg text-center">ห้อง</th></tr></thead>
+                    <tbody id="modal-table-body"></tbody><tfoot id="modal-table-foot"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        Chart.register(ChartDataLabels);
+        Chart.defaults.font.family = "'Prompt', sans-serif";
+
+        const SHEET_ID = '13CErg-zj2dB4qoVFJCGe58zVtC2H9cnThO_V30DJuig';
+        const SHEET_NAMES = ['2568-1', '2567-1', '2566-1'];
+
+        let studentBarChart, genderDoughnutChart, levelDoughnutChart, historicalChart;
+
+        const detailsModal = document.getElementById('details-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const totalStudentsCard = document.getElementById('total-students-card');
+
+        const initFirebaseAndCounter = async () => {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+            const visitorCountSpan = document.getElementById('visitor-count');
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                 if(visitorCountSpan) visitorCountSpan.innerText = "N/A"; return;
+            }
+            try {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                else await signInAnonymously(auth);
+                const counterRef = doc(db, `artifacts/${appId}/public/data/site_stats`, "visitor_counter");
+                const newCount = await runTransaction(db, async (t) => {
+                    const doc = await t.get(counterRef);
+                    const newCount = (doc.data()?.count || 0) + 1;
+                    t.set(counterRef, { count: newCount }, { merge: true });
+                    return newCount;
+                });
+                if (visitorCountSpan) visitorCountSpan.innerText = newCount.toLocaleString();
+            } catch (error) {
+                console.error("Firebase/Counter Error:", error);
+                if (visitorCountSpan) visitorCountSpan.innerText = 'Error';
+            }
+        };
+
+        const fetchData = (sheetName) => new Promise((resolve) => {
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
+            Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => { console.error(`Fetch Error: ${sheetName}`, e); resolve([]); } });
+        });
+
+        const fetchAllData = () => {
+            Promise.all(SHEET_NAMES.map(name => fetchData(name)))
+                .then(([data2568, data2567, data2566]) => {
+                    if(data2568.length > 0) processCurrentYearData(data2568);
+                    processHistoricalData({ '2568': data2568, '2567': data2567, '2566': data2566 });
+                });
+        };
+
+        const processCurrentYearData = (data) => {
+            const stats = { 'ม.1': {m:0,f:0,t:0,r:0},'ม.2':{m:0,f:0,t:0,r:0},'ม.3':{m:0,f:0,t:0,r:0},'ม.4':{m:0,f:0,t:0,r:0},'ม.5':{m:0,f:0,t:0,r:0},'ม.6':{m:0,f:0,t:0,r:0} };
+            let totalStudents=0, totalClassrooms=0, totalMale=0, totalFemale=0;
+            data.forEach(r => {
+                const g = r['class']?.trim(); const m = parseInt(r['male'])||0; const f = parseInt(r['female'])||0; const rm = parseInt(r['room'])||0;
+                if (g && stats[g]) {
+                    stats[g].m+=m; stats[g].f+=f; stats[g].r+=rm; const sT=m+f; stats[g].t+=sT; totalStudents+=sT; totalClassrooms+=rm; totalMale+=m; totalFemale+=f;
+                }
+            });
+            const jT=stats['ม.1'].t+stats['ม.2'].t+stats['ม.3'].t, sT=stats['ม.4'].t+stats['ม.5'].t+stats['ม.6'].t;
+            updateUI(stats,totalStudents,totalClassrooms,jT,sT); createBarChart(stats); createGenderDoughnutChart(totalMale,totalFemale); createLevelDoughnutChart(jT,sT); populateDetailsModal(stats,totalMale,totalFemale,totalStudents,totalClassrooms);
+        };
+        
+        const processHistoricalData = (allData) => {
+            const gradeLabels = ['ม.1','ม.2','ม.3','ม.4','ม.5','ม.6'];
+            const years = ['2566','2567','2568'];
+            
+            const datasets = years.map(year => ({
+                type: 'bar',
+                label:`ปีการศึกษา ${year}`,
+                data: gradeLabels.map(grade => {
+                    const gradeData = allData[year]?.find(row => row['class']?.trim() === grade);
+                    return gradeData ? (parseInt(gradeData['total']) || (parseInt(gradeData['male']) || 0) + (parseInt(gradeData['female']) || 0)) : 0;
+                })
+            }));
+            
+            const data2568 = datasets.find(d => d.label.includes('2568'))?.data;
+            if (data2568) {
+                datasets.push({
+                    label: 'แนวโน้มปี 2568',
+                    data: data2568,
+                    type: 'line',
+                    fill: false,
+                    borderColor: 'rgba(217, 119, 6, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(217, 119, 6, 1)',
+                    pointRadius: 3,
+                    tension: 0.1
+                });
+            }
+
+            createHistoricalChart(gradeLabels, datasets);
+        };
+
+        const updateUI = (s,tS,tC,jT,sT) => {
+            const setText = (id,txt) => { const el=document.getElementById(id); if (el) el.innerText=txt; };
+            setText('total-students',tS.toLocaleString()); setText('total-classrooms',tC.toLocaleString());
+            ['m1','m2','m3','m4','m5','m6'].forEach((l,i) => setText(`${l}-total`,`${s[`ม.${i+1}`]?.t?.toLocaleString()||0} คน`));
+            setText('junior-total',`${jT.toLocaleString()} คน`); setText('senior-total',`${sT.toLocaleString()} คน`); setText('grand-total',`${tS.toLocaleString()} คน`); setText('grand-total-classrooms',`${tC.toLocaleString()} ห้อง`);
+        };
+
+        const populateDetailsModal = (s,tM,tF,tS,tC) => {
+            const tb = document.getElementById('modal-table-body'), tf=document.getElementById('modal-table-foot'); if(!tb||!tf)return; tb.innerHTML='';tf.innerHTML='';
+            Object.keys(s).forEach(g=>{const d=s[g];tb.innerHTML+=`<tr class="border-b hover:bg-gray-50"><td class="px-6 py-3 font-bold text-gray-900">${g}</td><td class="px-6 py-3 text-center">${d.m.toLocaleString()}</td><td class="px-6 py-3 text-center">${d.f.toLocaleString()}</td><td class="px-6 py-3 text-center font-semibold text-gray-800">${d.t.toLocaleString()}</td><td class="px-6 py-3 text-center">${d.r.toLocaleString()}</td></tr>`;});
+            tf.innerHTML = `<tr class="border-t-2 border-dashed border-gray-300"><td class="px-6 py-4 font-bold text-gray-900">รวมทั้งสิ้น</td><td class="px-6 py-4 text-center font-bold text-gray-800">${tM.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-gray-800">${tF.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-blue-600">${tS.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-green-700">${tC.toLocaleString()}</td></tr>`;
+        };
+
+        totalStudentsCard.addEventListener('click', () => detailsModal.classList.remove('hidden'));
+        closeModalBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
+        detailsModal.addEventListener('click', (e) => { if (e.target === detailsModal) detailsModal.classList.add('hidden'); });
+
+        const barChartOptions = { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'},datalabels:{anchor:'end',align:'top',color:'#4b5563',font:{weight:'bold'},formatter:(v)=>v>0?v.toLocaleString():''}}, scales:{y:{grid:{display:false},beginAtZero:true},x:{grid:{display:false},ticks:{font:{size:14}}}} };
+        const doughnutOptions = { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:20,padding:15}},datalabels:{color:'#374151',font:{weight:'bold',size:11},formatter:(v,c)=>{if(v===0)return'';const t=c.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);return(v/t*100).toFixed(1)+'%';}}}};
+        
+        const createBarChart=(s)=>{const c=document.getElementById('studentBarChart')?.getContext('2d');if(!c)return;if(studentBarChart)studentBarChart.destroy();studentBarChart=new Chart(c,{type:'bar',data:{labels:Object.keys(s),datasets:[{label:'ชาย',data:Object.values(s).map(d=>d.m),backgroundColor:'rgba(20,184,166,0.7)',borderColor:'rgba(20,184,166,1)',borderRadius:8},{label:'หญิง',data:Object.values(s).map(d=>d.f),backgroundColor:'rgba(249,115,22,0.7)',borderColor:'rgba(249,115,22,1)',borderRadius:8}]},options:barChartOptions});};
+        const createGenderDoughnutChart=(tM,tF)=>{const c=document.getElementById('genderDoughnutChart')?.getContext('2d');if(!c)return;if(genderDoughnutChart)genderDoughnutChart.destroy();genderDoughnutChart=new Chart(c,{type:'doughnut',data:{labels:['ชาย','หญิง'],datasets:[{data:[tM,tF],backgroundColor:['rgba(20,184,166,0.8)','rgba(249,115,22,0.8)'],borderColor:['rgba(20,184,166,1)','rgba(249,115,22,1)'],borderWidth:2}]},options:doughnutOptions});};
+        const createLevelDoughnutChart=(jT,sT)=>{const c=document.getElementById('levelDoughnutChart')?.getContext('2d');if(!c)return;if(levelDoughnutChart)levelDoughnutChart.destroy();levelDoughnutChart=new Chart(c,{type:'doughnut',data:{labels:['ม.ต้น','ม.ปลาย'],datasets:[{data:[jT,sT],backgroundColor:['rgba(234,179,8,0.8)','rgba(107,33,168,0.8)'],borderColor:['rgba(234,179,8,1)','rgba(107,33,168,1)'],borderWidth:2}]},options:doughnutOptions});};
+        
+        const createHistoricalChart = (labels, datasets) => {
+            const ctx = document.getElementById('historicalChart')?.getContext('2d');
+            if(!ctx) return;
+            if (historicalChart) historicalChart.destroy();
+            const colors = [ { bg: 'rgba(219, 39, 119, 0.7)', border: 'rgba(219, 39, 119, 1)' }, { bg: 'rgba(20, 184, 166, 0.7)', border: 'rgba(20, 184, 166, 1)' }, { bg: 'rgba(234, 179, 8, 0.7)', border: 'rgba(234, 179, 8, 1)' }];
+            const yearColorMap = { '2566': colors[0], '2567': colors[1], '2568': colors[2] };
+            datasets.forEach(d => { const y = d.label.split(' ')[1]; const c = yearColorMap[y]; if(c){ d.backgroundColor=c.bg; d.borderColor=c.border; d.borderWidth=1; d.borderRadius=5;} });
+            historicalChart = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, datalabels: { display: false } }, scales: { y: { grid: {display: false}, beginAtZero: true }, x: { grid: {display: false}, ticks: { font: { size: 14 } } } } } });
+        };
+        
+        initFirebaseAndCounter();
+        fetchAllData();
+    </script>
+</body>
+</html>
