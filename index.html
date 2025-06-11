@@ -84,7 +84,7 @@
             </div>
 
             <!-- Current Year Charts Section -->
-            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 mb-8">
+            <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 mb-8">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">ภาพรวมจำนวนนักเรียน ปีการศึกษา 2568</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
                     <div class="lg:col-span-3 w-full h-96"><canvas id="studentBarChart"></canvas></div>
@@ -96,7 +96,7 @@
             </div>
 
             <!-- Historical Data Chart Section -->
-            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 mb-8">
+            <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 mb-8">
                  <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">ข้อมูลเปรียบเทียบจำนวนนักเรียนรายชั้นย้อนหลัง 3 ปี</h2>
                  <div class="w-full h-96">
                      <canvas id="historicalChart"></canvas>
@@ -139,158 +139,148 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // ***************************************************************
-        // ** ขั้นตอนที่ 1: วาง FIREBASE CONFIG ของคุณที่นี่ **
-        // คัดลอก object `firebaseConfig` จากโปรเจกต์ Firebase ของคุณ
-        // แล้วนำมาวางแทนที่ object ตัวอย่างด้านล่างนี้
-        // ***************************************************************
-        const firebaseConfig = {
-  apiKey: "AIzaSyBTeXSsb8mSLqgvROHQk5denXCK0o29CJI",
-  authDomain: "studentwebstat2568-1.firebaseapp.com",
-  projectId: "studentwebstat2568-1",
-  storageBucket: "studentwebstat2568-1.firebasestorage.app",
-  messagingSenderId: "1082264916894",
-  appId: "1:1082264916894:web:2958711261b959a2a57c8f",
-  measurementId: "G-L2ZQT7Q0E2"
-};
-        // ***************************************************************
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            Chart.register(ChartDataLabels);
+            Chart.defaults.font.family = "'Prompt', sans-serif";
 
-        Chart.register(ChartDataLabels);
-        Chart.defaults.font.family = "'Prompt', sans-serif";
+            // ** ขั้นตอน: นำ URL ของ Google Apps Script ที่คุณได้จากการ Deploy (หลังจากแก้โค้ดเป็น doGet) มาวางที่นี่ **
+            const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx4RsQsCnytX5XukRIkVv5iIeNrMOk4T7OrIwGOarahBjtLRTZriuxyECKeksbNJfsL/exec';
 
-        const SHEET_ID = '13CErg-zj2dB4qoVFJCGe58zVtC2H9cnThO_V30DJuig';
-        const SHEET_NAMES = ['2568-1', '2567-1', '2566-1'];
+            const SHEET_ID = '13CErg-zj2dB4qoVFJCGe58zVtC2H9cnThO_V30DJuig';
+            const SHEET_NAMES = ['2568-1', '2567-1', '2566-1'];
 
-        let studentBarChart, genderDoughnutChart, levelDoughnutChart, historicalChart;
+            let studentBarChart, genderDoughnutChart, levelDoughnutChart, historicalChart;
 
-        const detailsModal = document.getElementById('details-modal');
-        const closeModalBtn = document.getElementById('close-modal-btn');
-        const totalStudentsCard = document.getElementById('total-students-card');
+            const detailsModal = document.getElementById('details-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const totalStudentsCard = document.getElementById('total-students-card');
 
-        const initFirebaseAndCounter = async () => {
-            const visitorCountSpan = document.getElementById('visitor-count');
-            if (!firebaseConfig || !firebaseConfig.apiKey) {
-                 console.log("Firebase config is missing. Skipping persistent visitor counter.");
-                 if(visitorCountSpan) visitorCountSpan.innerText = "N/A";
-                 return;
-            }
-            try {
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
-                await signInAnonymously(auth);
-                const counterRef = doc(db, "public_counters/student_stats_dashboard", "visitor_counter");
-                const newCount = await runTransaction(db, async (t) => {
-                    const doc = await t.get(counterRef);
-                    const newCount = (doc.data()?.count || 0) + 1;
-                    t.set(counterRef, { count: newCount }, { merge: true });
-                    return newCount;
-                });
-                if (visitorCountSpan) visitorCountSpan.innerText = newCount.toLocaleString();
-            } catch (error) {
-                console.error("Firebase/Counter Error:", error);
-                if (visitorCountSpan) visitorCountSpan.innerText = 'Error';
-            }
-        };
-
-        const fetchData = (sheetName) => new Promise((resolve) => {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
-            Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => { console.error(`Fetch Error: ${sheetName}`, e); resolve([]); } });
-        });
-
-        const fetchAllData = () => {
-            Promise.all(SHEET_NAMES.map(name => fetchData(name)))
-                .then(([data2568, data2567, data2566]) => {
-                    if(data2568.length > 0) processCurrentYearData(data2568);
-                    processHistoricalData({ '2568': data2568, '2567': data2567, '2566': data2566 });
-                });
-        };
-
-        const processCurrentYearData = (data) => {
-            const stats = { 'ม.1': {m:0,f:0,t:0,r:0},'ม.2':{m:0,f:0,t:0,r:0},'ม.3':{m:0,f:0,t:0,r:0},'ม.4':{m:0,f:0,t:0,r:0},'ม.5':{m:0,f:0,t:0,r:0},'ม.6':{m:0,f:0,t:0,r:0} };
-            let totalStudents=0, totalClassrooms=0, totalMale=0, totalFemale=0;
-            data.forEach(r => {
-                const g = r['class']?.trim(); const m = parseInt(r['male'])||0; const f = parseInt(r['female'])||0; const rm = parseInt(r['room'])||0;
-                if (g && stats[g]) {
-                    stats[g].m+=m; stats[g].f+=f; stats[g].r+=rm; const sT=m+f; stats[g].t+=sT; totalStudents+=sT; totalClassrooms+=rm; totalMale+=m; totalFemale+=f;
+            const updateVisitorCount = () => {
+                const visitorCountSpan = document.getElementById('visitor-count');
+                if (!APPS_SCRIPT_URL) {
+                    console.warn("Google Apps Script URL is not set. Visitor counter will not work.");
+                    if(visitorCountSpan) visitorCountSpan.innerText = "N/A";
+                    return;
                 }
-            });
-            const jT=stats['ม.1'].t+stats['ม.2'].t+stats['ม.3'].t, sT=stats['ม.4'].t+stats['ม.5'].t+stats['ม.6'].t;
-            updateUI(stats,totalStudents,totalClassrooms,jT,sT); createBarChart(stats); createGenderDoughnutChart(totalMale,totalFemale); createLevelDoughnutChart(jT,sT); populateDetailsModal(stats,totalMale,totalFemale,totalStudents,totalClassrooms);
-        };
-        
-        const processHistoricalData = (allData) => {
-            const gradeLabels = ['ม.1','ม.2','ม.3','ม.4','ม.5','ม.6'];
-            const years = ['2566','2567','2568'];
-            
-            const datasets = years.map(year => ({
-                type: 'bar',
-                label:`ปีการศึกษา ${year}`,
-                data: gradeLabels.map(grade => {
-                    const gradeData = allData[year]?.find(row => row['class']?.trim() === grade);
-                    return gradeData ? (parseInt(gradeData['total']) || (parseInt(gradeData['male']) || 0) + (parseInt(gradeData['female']) || 0)) : 0;
+                
+                // The fetch request should be a simple GET request
+                fetch(APPS_SCRIPT_URL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
                 })
-            }));
-            
-            const data2568 = datasets.find(d => d.label.includes('2568'))?.data;
-            if (data2568) {
-                datasets.push({
-                    label: 'แนวโน้มปี 2568',
-                    data: data2568,
-                    type: 'line',
-                    fill: false,
-                    borderColor: 'rgba(217, 119, 6, 1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(217, 119, 6, 1)',
-                    pointRadius: 3,
-                    tension: 0.1
+                .then(count => {
+                    if (visitorCountSpan && !isNaN(count)) {
+                        visitorCountSpan.innerText = parseInt(count).toLocaleString();
+                    } else {
+                         // This case might happen if the script returns something unexpected
+                         console.error("Received non-numeric value from Apps Script:", count);
+                         if (visitorCountSpan) visitorCountSpan.innerText = 'Data Error';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating visitor count:', error);
+                    if (visitorCountSpan) visitorCountSpan.innerText = 'Error';
                 });
-            }
+            };
 
-            createHistoricalChart(gradeLabels, datasets);
-        };
+            const fetchData = (sheetName) => new Promise((resolve) => {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
+                Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => resolve(r.data), error: (e) => { console.error(`Fetch Error: ${sheetName}`, e); resolve([]); } });
+            });
 
-        const updateUI = (s,tS,tC,jT,sT) => {
-            const setText = (id,txt) => { const el=document.getElementById(id); if (el) el.innerText=txt; };
-            setText('total-students',tS.toLocaleString()); setText('total-classrooms',tC.toLocaleString());
-            ['m1','m2','m3','m4','m5','m6'].forEach((l,i) => setText(`${l}-total`,`${s[`ม.${i+1}`]?.t?.toLocaleString()||0} คน`));
-            setText('junior-total',`${jT.toLocaleString()} คน`); setText('senior-total',`${sT.toLocaleString()} คน`); setText('grand-total',`${tS.toLocaleString()} คน`); setText('grand-total-classrooms',`${tC.toLocaleString()} ห้อง`);
-        };
+            const fetchAllData = () => {
+                Promise.all(SHEET_NAMES.map(name => fetchData(name)))
+                    .then(([data2568, data2567, data2566]) => {
+                        if(data2568.length > 0) processCurrentYearData(data2568);
+                        processHistoricalData({ '2568': data2568, '2567': data2567, '2566': data2566 });
+                    });
+            };
 
-        const populateDetailsModal = (s,tM,tF,tS,tC) => {
-            const tb = document.getElementById('modal-table-body'), tf=document.getElementById('modal-table-foot'); if(!tb||!tf)return; tb.innerHTML='';tf.innerHTML='';
-            Object.keys(s).forEach(g=>{const d=s[g];tb.innerHTML+=`<tr class="border-b hover:bg-gray-50"><td class="px-6 py-3 font-bold text-gray-900">${g}</td><td class="px-6 py-3 text-center">${d.m.toLocaleString()}</td><td class="px-6 py-3 text-center">${d.f.toLocaleString()}</td><td class="px-6 py-3 text-center font-semibold text-gray-800">${d.t.toLocaleString()}</td><td class="px-6 py-3 text-center">${d.r.toLocaleString()}</td></tr>`;});
-            tf.innerHTML = `<tr class="border-t-2 border-dashed border-gray-300"><td class="px-6 py-4 font-bold text-gray-900">รวมทั้งสิ้น</td><td class="px-6 py-4 text-center font-bold text-gray-800">${tM.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-gray-800">${tF.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-blue-600">${tS.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-green-700">${tC.toLocaleString()}</td></tr>`;
-        };
+            const processCurrentYearData = (data) => {
+                const stats = { 'ม.1': {m:0,f:0,t:0,r:0},'ม.2':{m:0,f:0,t:0,r:0},'ม.3':{m:0,f:0,t:0,r:0},'ม.4':{m:0,f:0,t:0,r:0},'ม.5':{m:0,f:0,t:0,r:0},'ม.6':{m:0,f:0,t:0,r:0} };
+                let totalStudents=0, totalClassrooms=0, totalMale=0, totalFemale=0;
+                data.forEach(r => {
+                    const g = r['class']?.trim(); const m = parseInt(r['male'])||0; const f = parseInt(r['female'])||0; const rm = parseInt(r['room'])||0;
+                    if (g && stats[g]) {
+                        stats[g].m+=m; stats[g].f+=f; stats[g].r+=rm; const sT=m+f; stats[g].t+=sT; totalStudents+=sT; totalClassrooms+=rm; totalMale+=m; totalFemale+=f;
+                    }
+                });
+                const jT=stats['ม.1'].t+stats['ม.2'].t+stats['ม.3'].t, sT=stats['ม.4'].t+stats['ม.5'].t+stats['ม.6'].t;
+                updateUI(stats,totalStudents,totalClassrooms,jT,sT); createBarChart(stats); createGenderDoughnutChart(totalMale,totalFemale); createLevelDoughnutChart(jT,sT); populateDetailsModal(stats,totalMale,totalFemale,totalStudents,totalClassrooms);
+            };
+            
+            const processHistoricalData = (allData) => {
+                const gradeLabels = ['ม.1','ม.2','ม.3','ม.4','ม.5','ม.6'];
+                const years = ['2566','2567','2568'];
+                
+                const datasets = years.map(year => ({
+                    type: 'bar',
+                    label:`ปีการศึกษา ${year}`,
+                    data: gradeLabels.map(grade => {
+                        const gradeData = allData[year]?.find(row => row['class']?.trim() === grade);
+                        return gradeData ? (parseInt(gradeData['total']) || (parseInt(gradeData['male']) || 0) + (parseInt(gradeData['female']) || 0)) : 0;
+                    })
+                }));
+                
+                const data2568 = datasets.find(d => d.label.includes('2568'))?.data;
+                if (data2568) {
+                    datasets.push({
+                        label: 'แนวโน้มปี 2568',
+                        data: data2568,
+                        type: 'line',
+                        fill: false,
+                        borderColor: 'rgba(217, 119, 6, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(217, 119, 6, 1)',
+                        pointRadius: 3,
+                        tension: 0.1
+                    });
+                }
 
-        totalStudentsCard.addEventListener('click', () => detailsModal.classList.remove('hidden'));
-        closeModalBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
-        detailsModal.addEventListener('click', (e) => { if (e.target === detailsModal) detailsModal.classList.add('hidden'); });
+                createHistoricalChart(gradeLabels, datasets);
+            };
 
-        const barChartOptions = { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'},datalabels:{anchor:'end',align:'top',color:'#4b5563',font:{weight:'bold'},formatter:(v)=>v>0?v.toLocaleString():''}}, scales:{y:{grid:{display:false},beginAtZero:true},x:{grid:{display:false},ticks:{font:{size:14}}}} };
-        const doughnutOptions = { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:20,padding:15}},datalabels:{color:'#374151',font:{weight:'bold',size:11},formatter:(v,c)=>{if(v===0)return'';const t=c.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);return(v/t*100).toFixed(1)+'%';}}}};
-        
-        const createBarChart=(s)=>{const c=document.getElementById('studentBarChart')?.getContext('2d');if(!c)return;if(studentBarChart)studentBarChart.destroy();studentBarChart=new Chart(c,{type:'bar',data:{labels:Object.keys(s),datasets:[{label:'ชาย',data:Object.values(s).map(d=>d.m),backgroundColor:'rgba(20,184,166,0.7)',borderColor:'rgba(20,184,166,1)',borderRadius:8},{label:'หญิง',data:Object.values(s).map(d=>d.f),backgroundColor:'rgba(249,115,22,0.7)',borderColor:'rgba(249,115,22,1)',borderRadius:8}]},options:barChartOptions});};
-        const createGenderDoughnutChart=(tM,tF)=>{const c=document.getElementById('genderDoughnutChart')?.getContext('2d');if(!c)return;if(genderDoughnutChart)genderDoughnutChart.destroy();genderDoughnutChart=new Chart(c,{type:'doughnut',data:{labels:['ชาย','หญิง'],datasets:[{data:[tM,tF],backgroundColor:['rgba(20,184,166,0.8)','rgba(249,115,22,0.8)'],borderColor:['rgba(20,184,166,1)','rgba(249,115,22,1)'],borderWidth:2}]},options:doughnutOptions});};
-        const createLevelDoughnutChart=(jT,sT)=>{const c=document.getElementById('levelDoughnutChart')?.getContext('2d');if(!c)return;if(levelDoughnutChart)levelDoughnutChart.destroy();levelDoughnutChart=new Chart(c,{type:'doughnut',data:{labels:['ม.ต้น','ม.ปลาย'],datasets:[{data:[jT,sT],backgroundColor:['rgba(234,179,8,0.8)','rgba(107,33,168,0.8)'],borderColor:['rgba(234,179,8,1)','rgba(107,33,168,1)'],borderWidth:2}]},options:doughnutOptions});};
-        
-        const createHistoricalChart = (labels, datasets) => {
-            const ctx = document.getElementById('historicalChart')?.getContext('2d');
-            if(!ctx) return;
-            if (historicalChart) historicalChart.destroy();
-            const colors = [ { bg: 'rgba(219, 39, 119, 0.7)', border: 'rgba(219, 39, 119, 1)' }, { bg: 'rgba(20, 184, 166, 0.7)', border: 'rgba(20, 184, 166, 1)' }, { bg: 'rgba(234, 179, 8, 0.7)', border: 'rgba(234, 179, 8, 1)' }];
-            const yearColorMap = { '2566': colors[0], '2567': colors[1], '2568': colors[2] };
-            datasets.forEach(d => { const y = d.label.split(' ')[1]; const c = yearColorMap[y]; if(c){ d.backgroundColor=c.bg; d.borderColor=c.border; d.borderWidth=1; d.borderRadius=5;} });
-            historicalChart = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, datalabels: { display: false } }, scales: { y: { grid: {display: false}, beginAtZero: true }, x: { grid: {display: false}, ticks: { font: { size: 14 } } } } } });
-        };
-        
-        initFirebaseAndCounter();
-        fetchAllData();
+            const updateUI = (s,tS,tC,jT,sT) => {
+                const setText = (id,txt) => { const el=document.getElementById(id); if (el) el.innerText=txt; };
+                setText('total-students',tS.toLocaleString()); setText('total-classrooms',tC.toLocaleString());
+                ['m1','m2','m3','m4','m5','m6'].forEach((l,i) => setText(`${l}-total`,`${s[`ม.${i+1}`]?.t?.toLocaleString()||0} คน`));
+                setText('junior-total',`${jT.toLocaleString()} คน`); setText('senior-total',`${sT.toLocaleString()} คน`); setText('grand-total',`${tS.toLocaleString()} คน`); setText('grand-total-classrooms',`${tC.toLocaleString()} ห้อง`);
+            };
+
+            const populateDetailsModal = (s,tM,tF,tS,tC) => {
+                const tb = document.getElementById('modal-table-body'), tf=document.getElementById('modal-table-foot'); if(!tb||!tf)return; tb.innerHTML='';tf.innerHTML='';
+                Object.keys(s).forEach(g=>{const d=s[g];tb.innerHTML+=`<tr class="border-b hover:bg-gray-50"><td class="px-6 py-3 font-bold text-gray-900">${g}</td><td class="px-6 py-3 text-center">${d.m.toLocaleString()}</td><td class="px-6 py-3 text-center">${d.f.toLocaleString()}</td><td class="px-6 py-3 text-center font-semibold text-gray-800">${d.t.toLocaleString()}</td><td class="px-6 py-3 text-center">${d.r.toLocaleString()}</td></tr>`;});
+                tf.innerHTML = `<tr class="border-t-2 border-dashed border-gray-300"><td class="px-6 py-4 font-bold text-gray-900">รวมทั้งสิ้น</td><td class="px-6 py-4 text-center font-bold text-gray-800">${tM.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-gray-800">${tF.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-blue-600">${tS.toLocaleString()}</td><td class="px-6 py-4 text-center font-bold text-green-700">${tC.toLocaleString()}</td></tr>`;
+            };
+
+            totalStudentsCard.addEventListener('click', () => detailsModal.classList.remove('hidden'));
+            closeModalBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
+            detailsModal.addEventListener('click', (e) => { if (e.target === detailsModal) detailsModal.classList.add('hidden'); });
+
+            const barChartOptions = { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'},datalabels:{anchor:'end',align:'top',color:'#4b5563',font:{weight:'bold'},formatter:(v)=>v>0?v.toLocaleString():''}}, scales:{y:{grid:{display:false},beginAtZero:true},x:{grid:{display:false},ticks:{font:{size:14}}}} };
+            const doughnutOptions = { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:20,padding:15}},datalabels:{color:'#374151',font:{weight:'bold',size:11},formatter:(v,c)=>{if(v===0)return'';const t=c.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);return(v/t*100).toFixed(1)+'%';}}}};
+            
+            const createBarChart=(s)=>{const c=document.getElementById('studentBarChart')?.getContext('2d');if(!c)return;if(studentBarChart)studentBarChart.destroy();studentBarChart=new Chart(c,{type:'bar',data:{labels:Object.keys(s),datasets:[{label:'ชาย',data:Object.values(s).map(d=>d.m),backgroundColor:'rgba(20,184,166,0.7)',borderColor:'rgba(20,184,166,1)',borderRadius:8},{label:'หญิง',data:Object.values(s).map(d=>d.f),backgroundColor:'rgba(249,115,22,0.7)',borderColor:'rgba(249,115,22,1)',borderRadius:8}]},options:barChartOptions});};
+            const createGenderDoughnutChart=(tM,tF)=>{const c=document.getElementById('genderDoughnutChart')?.getContext('2d');if(!c)return;if(genderDoughnutChart)genderDoughnutChart.destroy();genderDoughnutChart=new Chart(c,{type:'doughnut',data:{labels:['ชาย','หญิง'],datasets:[{data:[tM,tF],backgroundColor:['rgba(20,184,166,0.8)','rgba(249,115,22,0.8)'],borderColor:['rgba(20,184,166,1)','rgba(249,115,22,1)'],borderWidth:2}]},options:doughnutOptions});};
+            const createLevelDoughnutChart=(jT,sT)=>{const c=document.getElementById('levelDoughnutChart')?.getContext('2d');if(!c)return;if(levelDoughnutChart)levelDoughnutChart.destroy();levelDoughnutChart=new Chart(c,{type:'doughnut',data:{labels:['ม.ต้น','ม.ปลาย'],datasets:[{data:[jT,sT],backgroundColor:['rgba(234,179,8,0.8)','rgba(107,33,168,0.8)'],borderColor:['rgba(234,179,8,1)','rgba(107,33,168,1)'],borderWidth:2}]},options:doughnutOptions});};
+            
+            const createHistoricalChart = (labels, datasets) => {
+                const ctx = document.getElementById('historicalChart')?.getContext('2d');
+                if(!ctx) return;
+                if (historicalChart) historicalChart.destroy();
+                const colors = [ { bg: 'rgba(219, 39, 119, 0.7)', border: 'rgba(219, 39, 119, 1)' }, { bg: 'rgba(20, 184, 166, 0.7)', border: 'rgba(20, 184, 166, 1)' }, { bg: 'rgba(234, 179, 8, 0.7)', border: 'rgba(234, 179, 8, 1)' }];
+                const yearColorMap = { '2566': colors[0], '2567': colors[1], '2568': colors[2] };
+                datasets.forEach(d => { const y = d.label.split(' ')[1]; const c = yearColorMap[y]; if(c){ d.backgroundColor=c.bg; d.borderColor=c.border; d.borderWidth=1; d.borderRadius=5;} });
+                historicalChart = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, datalabels: { display: false } }, scales: { y: { grid: {display: false}, beginAtZero: true }, x: { grid: {display: false}, ticks: { font: { size: 14 } } } } } });
+            };
+            
+            updateVisitorCount();
+            fetchAllData();
+        });
     </script>
 </body>
 </html>
