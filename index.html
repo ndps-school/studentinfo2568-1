@@ -141,9 +141,25 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
+        // ***************************************************************
+        // ** ขั้นตอนที่ 1: วาง FIREBASE CONFIG ของคุณที่นี่ **
+        // คัดลอก object `firebaseConfig` จากโปรเจกต์ Firebase ของคุณ
+        // แล้วนำมาวางแทนที่ object ตัวอย่างด้านล่างนี้
+        // ***************************************************************
+        const firebaseConfig = {
+  apiKey: "AIzaSyBTeXSsb8mSLqgvROHQk5denXCK0o29CJI",
+  authDomain: "studentwebstat2568-1.firebaseapp.com",
+  projectId: "studentwebstat2568-1",
+  storageBucket: "studentwebstat2568-1.firebasestorage.app",
+  messagingSenderId: "1082264916894",
+  appId: "1:1082264916894:web:2958711261b959a2a57c8f",
+  measurementId: "G-L2ZQT7Q0E2"
+};
+        // ***************************************************************
+
         Chart.register(ChartDataLabels);
         Chart.defaults.font.family = "'Prompt', sans-serif";
 
@@ -157,19 +173,18 @@
         const totalStudentsCard = document.getElementById('total-students-card');
 
         const initFirebaseAndCounter = async () => {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
             const visitorCountSpan = document.getElementById('visitor-count');
-            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-                 if(visitorCountSpan) visitorCountSpan.innerText = "N/A"; return;
+            if (!firebaseConfig || !firebaseConfig.apiKey) {
+                 console.log("Firebase config is missing. Skipping persistent visitor counter.");
+                 if(visitorCountSpan) visitorCountSpan.innerText = "N/A";
+                 return;
             }
             try {
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 const db = getFirestore(app);
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                else await signInAnonymously(auth);
-                const counterRef = doc(db, `artifacts/${appId}/public/data/site_stats`, "visitor_counter");
+                await signInAnonymously(auth);
+                const counterRef = doc(db, "public_counters/student_stats_dashboard", "visitor_counter");
                 const newCount = await runTransaction(db, async (t) => {
                     const doc = await t.get(counterRef);
                     const newCount = (doc.data()?.count || 0) + 1;
